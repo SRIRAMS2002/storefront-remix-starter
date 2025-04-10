@@ -1,20 +1,45 @@
 import { Link, useFetcher, useSearchParams } from '@remix-run/react';
-import { DataFunctionArgs, json, redirect } from '@remix-run/server-runtime';
+import { ActionFunctionArgs, json, redirect } from '@remix-run/server-runtime';
 import { login } from '~/providers/account/account';
 import { ErrorResult } from '~/generated/graphql';
 import { XCircleIcon } from '@heroicons/react/24/solid';
 import { Button } from '~/components/Button';
 import { ArrowPathIcon } from '@heroicons/react/24/solid';
 import { useTranslation } from 'react-i18next';
+import { getChannelsByCustomerEmail } from '~/providers/customPlugins/customPlugin'; 
 
-export async function action({ params, request }: DataFunctionArgs) {
+export async function action({ params, request }: ActionFunctionArgs) {
   const body = await request.formData();
   const email = body.get('email');
   const password = body.get('password');
+
   if (typeof email === 'string' && typeof password === 'string') {
     const rememberMe = !!body.get('rememberMe');
     const redirectTo = (body.get('redirectTo') || '/account') as string;
-    const result = await login(email, password, rememberMe, { request });
+
+    // 🔍 1. Get channels by email
+    const channels = await getChannelsByCustomerEmail(email);
+
+    if (!channels || channels.length === 0) {
+      return json(
+        { message: 'No channel associated with this email.' },
+        { status: 403 }
+      );
+    }
+
+    // ✅ 2. Pick the first channel
+    const selectedChannelToken = channels[0].token;
+
+    // 🧠 3. Call login with selected channel in headers
+    const result = await login(email, password, rememberMe, {
+      request,
+      customHeaders: {
+        'vendure-token': selectedChannelToken,
+      },
+    });
+    
+
+    // 🔒 4. Handle login result
     if (result.__typename === 'CurrentUser') {
       return redirect(redirectTo, { headers: result._headers });
     } else {
@@ -23,7 +48,11 @@ export async function action({ params, request }: DataFunctionArgs) {
       });
     }
   }
+
+  // fallback
+  return json({ message: 'Invalid email or password' }, { status: 400 });
 }
+
 
 export default function SignInPage() {
   const [searchParams] = useSearchParams();

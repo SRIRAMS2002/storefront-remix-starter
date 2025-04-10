@@ -1,5 +1,6 @@
 import gql from 'graphql-tag';
-import { GetChannelListQuery } from '~/generated/graphql';
+import { GetChannelListQuery, GetChannelsByCustomerEmailQuery,
+    GetChannelsByCustomerEmailQueryVariables, } from '~/generated/graphql';
 import { QueryOptions, sdk, WithHeaders } from '~/graphqlWrapper';
 
 export async function getChannelList(p0: { request: Request; }): Promise<WithHeaders<GetChannelListQuery['getChannelList']>> {
@@ -10,6 +11,16 @@ export async function getChannelList(p0: { request: Request; }): Promise<WithHea
     });
   }
 
+  export async function getChannelsByCustomerEmail(
+    email: string
+  ): Promise<WithHeaders<GetChannelsByCustomerEmailQuery['getChannelsByCustomerEmail']>> {
+    const response = await sdk.GetChannelsByCustomerEmail({ email }); // 👈 lowercase "g"
+    const result = Object.assign([...response.getChannelsByCustomerEmail], {
+      _headers: response._headers,
+    });
+    return result;
+  }
+  
   
 
 gql`
@@ -21,6 +32,19 @@ gql`
   }
  }
 `;
+
+gql`
+query GetChannelsByCustomerEmail($email: String!) {
+    getChannelsByCustomerEmail(email: $email) {
+      id
+      code
+      token
+      defaultCurrencyCode
+    }
+  }
+    `;
+
+
 
 
 

@@ -3203,6 +3203,7 @@ type Query {
   facets(options: FacetListOptions): FacetList!
   generateBraintreeClientToken: String
   getChannelList: [Channel!]!
+  getChannelsByCustomerEmail(email: String!): [Channel!]!
   getCouponCodeList: CoupcodesList!
   getPasswordResetToken: String!
 

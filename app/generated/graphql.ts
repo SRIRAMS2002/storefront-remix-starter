@@ -2914,6 +2914,7 @@ export type Query = {
   facets: FacetList;
   generateBraintreeClientToken?: Maybe<Scalars['String']>;
   getChannelList: Array<Channel>;
+  getChannelsByCustomerEmail: Array<Channel>;
   getCouponCodeList: CoupcodesList;
   getPasswordResetToken: Scalars['String'];
   /** Returns information about the current authenticated User */
@@ -2974,6 +2975,11 @@ export type QueryFacetArgs = {
 
 export type QueryFacetsArgs = {
   options?: InputMaybe<FacetListOptions>;
+};
+
+
+export type QueryGetChannelsByCustomerEmailArgs = {
+  email: Scalars['String'];
 };
 
 
@@ -3614,6 +3620,13 @@ export type GetChannelListQueryVariables = Exact<{ [key: string]: never; }>;
 
 export type GetChannelListQuery = { __typename?: 'Query', getChannelList: Array<{ __typename?: 'Channel', id: string, token: string, code: string }> };
 
+export type GetChannelsByCustomerEmailQueryVariables = Exact<{
+  email: Scalars['String'];
+}>;
+
+
+export type GetChannelsByCustomerEmailQuery = { __typename?: 'Query', getChannelsByCustomerEmail: Array<{ __typename?: 'Channel', id: string, code: string, token: string, defaultCurrencyCode: CurrencyCode }> };
+
 export type ActiveCustomerQueryVariables = Exact<{ [key: string]: never; }>;
 
 
@@ -4108,6 +4121,16 @@ export const GetChannelListDocument = gql`
   }
 }
     `;
+export const GetChannelsByCustomerEmailDocument = gql`
+    query GetChannelsByCustomerEmail($email: String!) {
+  getChannelsByCustomerEmail(email: $email) {
+    id
+    code
+    token
+    defaultCurrencyCode
+  }
+}
+    `;
 export const ActiveCustomerDocument = gql`
     query activeCustomer {
   activeCustomer {
@@ -4410,6 +4433,9 @@ export function getSdk<C, E>(requester: Requester<C, E>) {
     },
     getChannelList(variables?: GetChannelListQueryVariables, options?: C): Promise<GetChannelListQuery> {
       return requester<GetChannelListQuery, GetChannelListQueryVariables>(GetChannelListDocument, variables, options) as Promise<GetChannelListQuery>;
+    },
+    GetChannelsByCustomerEmail(variables: GetChannelsByCustomerEmailQueryVariables, options?: C): Promise<GetChannelsByCustomerEmailQuery> {
+      return requester<GetChannelsByCustomerEmailQuery, GetChannelsByCustomerEmailQueryVariables>(GetChannelsByCustomerEmailDocument, variables, options) as Promise<GetChannelsByCustomerEmailQuery>;
     },
     activeCustomer(variables?: ActiveCustomerQueryVariables, options?: C): Promise<ActiveCustomerQuery> {
       return requester<ActiveCustomerQuery, ActiveCustomerQueryVariables>(ActiveCustomerDocument, variables, options) as Promise<ActiveCustomerQuery>;
