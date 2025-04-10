@@ -4,7 +4,9 @@ import { getSdk } from './generated/graphql';
 import { getSessionStorage } from './sessions';
 
 export interface QueryOptions {
-  request: Request;
+  request?: Request;
+  headers?: Headers;
+  customHeaders?: Record<string, string>;
 }
 
 export interface GraphqlResponse<Response> {
@@ -15,53 +17,67 @@ export interface GraphqlResponse<Response> {
 export type WithHeaders<T> = T & { _headers: Headers };
 
 const AUTH_TOKEN_SESSION_KEY = 'authToken';
+const CHANNEL_TOKEN_SESSION_KEY = 'channelToken';
 
+// ✅ Central function to send GraphQL queries/mutations
 async function sendQuery<Response, Variables = {}>(options: {
   query: string;
   variables?: Variables;
   headers?: Headers;
   request?: Request;
+  customHeaders?: Record<string, string>;
 }): Promise<GraphqlResponse<Response> & { headers: Headers }> {
   const headers = new Headers(options.headers);
-  const req = options.request;
-  headers.append('Content-Type', 'application/json');
-  const session = await getSessionStorage().then((sessionStorage) =>
-    sessionStorage.getSession(options.request?.headers.get('Cookie')),
-  );
-  if (session) {
-    // If we have a vendure auth token stored in the Remix session, then we
-    // add it as a bearer token to the API request being sent to Vendure.
-    const token = session.get(AUTH_TOKEN_SESSION_KEY);
-    if (token) {
-      headers.append('Authorization', `Bearer ${token}`);
+
+  // ✅ Add customHeaders with priority
+  if (options.customHeaders) {
+    for (const [key, value] of Object.entries(options.customHeaders)) {
+      headers.set(key, value);
     }
   }
 
-  return fetch(API_URL, {
+  const sessionStorage = await getSessionStorage();
+  const session = await sessionStorage.getSession(
+    options.request?.headers.get('Cookie'),
+  );
+
+  // ✅ Only inject vendure-token from session if not already set
+  if (!headers.has('vendure-token')) {
+    const sessionChannelToken = session?.get(CHANNEL_TOKEN_SESSION_KEY);
+    if (sessionChannelToken) {
+      headers.set('vendure-token', sessionChannelToken);
+    }
+  }
+
+  const authToken = session?.get(AUTH_TOKEN_SESSION_KEY);
+  if (authToken) {
+    headers.set('Authorization', `Bearer ${authToken}`);
+  }
+
+  headers.set('Content-Type', 'application/json');
+
+  const res = await fetch(API_URL, {
     method: 'POST',
-    body: JSON.stringify(options),
     headers,
-  }).then(async (res) => ({
-    ...(await res.json()),
+    body: JSON.stringify({
+      query: options.query,
+      variables: options.variables,
+    }),
+  });
+
+  const json = (await res.json()) as GraphqlResponse<Response>;
+  return {
+    ...json,
     headers: res.headers,
-  }));
+  };
 }
 
-const baseSdk = getSdk<QueryOptions, unknown>(requester);
 
-type Sdk = typeof baseSdk;
-type SdkWithHeaders = {
-  [k in keyof Sdk]: (
-    ...args: Parameters<Sdk[k]>
-  ) => Promise<Awaited<ReturnType<Sdk[k]>> & { _headers: Headers }>;
-};
-
-export const sdk: SdkWithHeaders = baseSdk as any;
-
+// ✅ Requester that handles session-based tokens and returns headers
 function requester<R, V>(
   doc: DocumentNode,
   vars?: V,
-  options?: { headers?: Headers; request?: Request },
+  options?: QueryOptions
 ): Promise<R & { _headers: Headers }> {
   return sendQuery<R, V>({
     query: print(doc),
@@ -70,27 +86,41 @@ function requester<R, V>(
   }).then(async (response) => {
     const token = response.headers.get('vendure-auth-token');
     const headers: Record<string, string> = {};
-    if (token) {
-      // If Vendure responded with an auth token, it means a new Vendure session
-      // has started. In this case, we will store that auth token in the Remix session
-      // so that we can attach it as an Authorization header in all subsequent requests.
-      const sessionStorage = await getSessionStorage();
-      const session = await sessionStorage.getSession(
-        options?.request?.headers.get('Cookie'),
-      );
-      if (session) {
-        session.set(AUTH_TOKEN_SESSION_KEY, token);
-        headers['Set-Cookie'] = await sessionStorage.commitSession(session);
-      }
+
+    const sessionStorage = await getSessionStorage();
+    const session = await sessionStorage.getSession(
+      options?.request?.headers.get('Cookie'),
+    );
+
+    if (token && session) {
+      // ✅ Store new auth token
+      session.set(AUTH_TOKEN_SESSION_KEY, token);
+      headers['Set-Cookie'] = await sessionStorage.commitSession(session);
     }
+
     headers['x-vendure-api-url'] = API_URL;
-    if (response.errors) {
-      console.log(
-        response.errors[0].extensions?.exception?.stacktrace.join('\n') ??
+
+    if (response.errors?.length) {
+      console.error(
+        response.errors[0].extensions?.exception?.stacktrace?.join('\n') ??
           response.errors,
       );
       throw new Error(JSON.stringify(response.errors[0]));
     }
+
     return { ...response.data, _headers: new Headers(headers) };
   });
 }
+
+// ✅ Base SDK with wrapped requester
+const baseSdk = getSdk<QueryOptions, unknown>(requester);
+
+// ✅ Add types and headers to SDK functions
+type Sdk = typeof baseSdk;
+type SdkWithHeaders = {
+  [K in keyof Sdk]: (
+    ...args: Parameters<Sdk[K]>
+  ) => Promise<Awaited<ReturnType<Sdk[K]>> & { _headers: Headers }>;
+};
+
+export const sdk: SdkWithHeaders = baseSdk as any;

@@ -3609,6 +3609,11 @@ export type CollectionQueryVariables = Exact<{
 
 export type CollectionQuery = { __typename?: 'Query', collection?: { __typename?: 'Collection', id: string, name: string, slug: string, breadcrumbs: Array<{ __typename?: 'CollectionBreadcrumb', id: string, name: string, slug: string }>, children?: Array<{ __typename?: 'Collection', id: string, name: string, slug: string, featuredAsset?: { __typename?: 'Asset', id: string, preview: string } | null }> | null } | null };
 
+export type GetChannelListQueryVariables = Exact<{ [key: string]: never; }>;
+
+
+export type GetChannelListQuery = { __typename?: 'Query', getChannelList: Array<{ __typename?: 'Channel', id: string, token: string, code: string }> };
+
 export type ActiveCustomerQueryVariables = Exact<{ [key: string]: never; }>;
 
 
@@ -4094,6 +4099,15 @@ export const CollectionDocument = gql`
   }
 }
     `;
+export const GetChannelListDocument = gql`
+    query getChannelList {
+  getChannelList {
+    id
+    token
+    code
+  }
+}
+    `;
 export const ActiveCustomerDocument = gql`
     query activeCustomer {
   activeCustomer {
@@ -4393,6 +4407,9 @@ export function getSdk<C, E>(requester: Requester<C, E>) {
     },
     collection(variables?: CollectionQueryVariables, options?: C): Promise<CollectionQuery> {
       return requester<CollectionQuery, CollectionQueryVariables>(CollectionDocument, variables, options) as Promise<CollectionQuery>;
+    },
+    getChannelList(variables?: GetChannelListQueryVariables, options?: C): Promise<GetChannelListQuery> {
+      return requester<GetChannelListQuery, GetChannelListQueryVariables>(GetChannelListDocument, variables, options) as Promise<GetChannelListQuery>;
     },
     activeCustomer(variables?: ActiveCustomerQueryVariables, options?: C): Promise<ActiveCustomerQuery> {
       return requester<ActiveCustomerQuery, ActiveCustomerQueryVariables>(ActiveCustomerDocument, variables, options) as Promise<ActiveCustomerQuery>;

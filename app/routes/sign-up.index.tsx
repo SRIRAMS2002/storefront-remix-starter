@@ -1,5 +1,5 @@
-import { Form, Link, useActionData, useSearchParams } from '@remix-run/react';
-import { ActionFunctionArgs, json, redirect } from '@remix-run/server-runtime';
+import { Form, Link, useActionData, useSearchParams, useLoaderData } from '@remix-run/react';
+import { ActionFunctionArgs, json, LoaderFunctionArgs, redirect } from '@remix-run/server-runtime';
 import { registerCustomerAccount } from '~/providers/account/account';
 import { XCircleIcon } from '@heroicons/react/24/solid';
 import {
@@ -10,38 +10,68 @@ import {
 import { API_URL, DEMO_API_URL } from '~/constants';
 import { useTranslation } from 'react-i18next';
 import { getFixedT } from '~/i18next.server';
+import { getChannelList } from '~/providers/customPlugins/customPlugin';
+import { getSessionStorage } from '~/sessions';
+
+export async function loader({ request }: LoaderFunctionArgs) {
+  const channels = await getChannelList({ request });
+  return json({ channels });
+}
 
 export async function action({ request }: ActionFunctionArgs) {
-  if (API_URL === DEMO_API_URL) {
-    const t = await getFixedT(request);
-
-    return {
-      form: t('vendure.registrationError'),
-    };
-  }
-
   const body = await request.formData();
+  const selectedChannelToken = body.get('channel')?.toString();
+
+  const sessionStorage = await getSessionStorage();
+  const session = await sessionStorage.getSession(request.headers.get('Cookie'));
+  
+  if (selectedChannelToken) {
+    session.set('channelToken', selectedChannelToken);
+  }
+  
   const fieldErrors = validateRegistrationForm(body);
   if (Object.keys(fieldErrors).length !== 0) {
     return fieldErrors;
   }
-
+  
   const variables = extractRegistrationFormValues(body);
-  const result = await registerCustomerAccount({ request }, variables);
+  
+  // ✅ Pass selected channel token explicitly
+  const result = await registerCustomerAccount(
+    {
+      request,
+      customHeaders: {
+        'vendure-token': selectedChannelToken ?? '',
+      },
+    },
+    variables
+  );
+  
   if (result.__typename === 'Success') {
-    return redirect('/sign-up/success');
+    return redirect('/sign-up/success', {
+      headers: {
+        'Set-Cookie': await sessionStorage.commitSession(session),
+      },
+    });
   } else {
     const formError: RegisterValidationErrors = {
       form: result.errorCode,
     };
-    return json(formError, { status: 401 });
+    return json(formError, {
+      status: 401,
+      headers: {
+        'Set-Cookie': await sessionStorage.commitSession(session),
+      },
+    });
   }
+  
 }
 
 export default function SignUpPage() {
   const [searchParams] = useSearchParams();
   const formErrors = useActionData<RegisterValidationErrors>();
   const { t } = useTranslation();
+  const { channels } = useLoaderData<typeof loader>();
 
   return (
     <>
@@ -128,6 +158,25 @@ export default function SignUpPage() {
                     autoComplete="family-name"
                     className="appearance-none block w-full px-3 py-2 border border-gray-300 rounded-md shadow-sm placeholder-gray-400 focus:outline-none focus:ring-primary-500 focus:border-primary-500 sm:text-sm"
                   />
+                </div>
+              </div>
+              <div>
+                <label htmlFor="channel" className="block text-sm font-medium text-gray-700">
+                  {t('account.channel')}
+                </label>
+                <div className="mt-1">
+                  <select
+                    id="channel"
+                    name="channel"
+                    className="block w-full px-3 py-2 border border-gray-300 rounded-md shadow-sm focus:outline-none focus:ring-primary-500 focus:border-primary-500 sm:text-sm"
+                    required
+                  >
+                    {channels.map((channel) => (
+                      <option key={channel.id} value={channel.token}>
+                        {channel.code}
+                      </option>
+                    ))}
+                  </select>
                 </div>
               </div>
 
