@@ -14,7 +14,8 @@
     "start:cf": "cross-env NODE_ENV=production yarn run dev:wrangler",
     "start": "remix-serve build",
     "generate": "graphql-codegen --config codegen.yml",
-    "prepare": "husky install"
+    "prepare": "husky install",
+    "codegen": "graphql-codegen --config codegen.ts"
   },
   "dependencies": {
     "@graphql-codegen/typescript-generic-sdk": "^3.0.4",
@@ -37,7 +38,7 @@
     "braintree-web-drop-in": "^1.33.7",
     "clsx": "^1.2.1",
     "cross-env": "^7.0.3",
-    "graphql": "^16.6.0",
+    "graphql": "^16.10.0",
     "graphql-tag": "^2.12.6",
     "i18next": "^23.7.7",
     "i18next-browser-languagedetector": "^7.2.0",
@@ -55,8 +56,9 @@
   },
   "devDependencies": {
     "@cloudflare/workers-types": "^4.20231218.0",
-    "@graphql-codegen/cli": "^2.13.12",
-    "@graphql-codegen/introspection": "^2.2.1",
+    "@graphql-codegen/cli": "5.0.5",
+    "@graphql-codegen/client-preset": "4.8.0",
+    "@graphql-codegen/introspection": "4.0.3",
     "@graphql-codegen/typescript": "^2.8.2",
     "@graphql-codegen/typescript-operations": "^2.5.7",
     "@remix-run/dev": "^2.4.1",
@@ -71,7 +73,7 @@
     "prettier": "^2.6.2",
     "tailwindcss": "^3.4.1",
     "ts-node": "^10.9.1",
-    "typescript": "^5.1.0",
+    "typescript": "^5.8.3",
     "wrangler": "^3.22.3"
   },
   "engines": {
