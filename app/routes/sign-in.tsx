@@ -6,52 +6,64 @@ import { XCircleIcon } from '@heroicons/react/24/solid';
 import { Button } from '~/components/Button';
 import { ArrowPathIcon } from '@heroicons/react/24/solid';
 import { useTranslation } from 'react-i18next';
-import { getChannelsByCustomerEmail } from '~/providers/customPlugins/customPlugin'; 
+import { getChannelsByCustomerEmail } from '~/providers/customPlugins/customPlugin';
 
 export async function action({ params, request }: ActionFunctionArgs) {
   const body = await request.formData();
-  const email = body.get('email');
+  let email = body.get('email');
   const password = body.get('password');
 
+  console.log('📥 Form Data:', { email, password });
+
   if (typeof email === 'string' && typeof password === 'string') {
+    if (/^\d{10}$/.test(email)) {
+      email = `${email}@kaikani.com`;
+      console.log('📧 Converted phone to email:', email);
+    }
+
     const rememberMe = !!body.get('rememberMe');
     const redirectTo = (body.get('redirectTo') || '/account') as string;
 
-    // 🔍 1. Get channels by email
+    console.log('🔍 Getting channels for:', email);
+
     const channels = await getChannelsByCustomerEmail(email);
 
+    console.log('📦 Channels fetched:', channels);
+
     if (!channels || channels.length === 0) {
+      console.log('❌ No channels found for:', email);
       return json(
         { message: 'No channel associated with this email.' },
         { status: 403 }
       );
     }
 
-    // ✅ 2. Pick the first channel
     const selectedChannelToken = channels[0].token;
+    console.log('🎯 Using channel token:', selectedChannelToken);
 
-    // 🧠 3. Call login with selected channel in headers
     const result = await login(email, password, rememberMe, {
       request,
       customHeaders: {
         'vendure-token': selectedChannelToken,
       },
     });
-    
 
-    // 🔒 4. Handle login result
+    console.log('✅ Login result:', result);
+
     if (result.__typename === 'CurrentUser') {
+      console.log('🎉 Login success! Redirecting to:', redirectTo);
       return redirect(redirectTo, { headers: result._headers });
     } else {
-      return json(result, {
-        status: 401,
-      });
+      console.log('🚫 Login failed:', result);
+      return json(result, { status: 401 });
     }
   }
 
-  // fallback
+  console.log('⚠️ Invalid form submission');
   return json({ message: 'Invalid email or password' }, { status: 400 });
 }
+
+
 
 
 export default function SignInPage() {
@@ -108,8 +120,8 @@ export default function SignInPage() {
                     <input
                       id="email"
                       name="email"
-                      type="email"
-                      autoComplete="email"
+                      type="tel"
+                      autoComplete="tel"
                       required
                       defaultValue="test@vendure.io"
                       placeholder={t('account.emailAddress')}

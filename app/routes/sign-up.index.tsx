@@ -24,18 +24,18 @@ export async function action({ request }: ActionFunctionArgs) {
 
   const sessionStorage = await getSessionStorage();
   const session = await sessionStorage.getSession(request.headers.get('Cookie'));
-  
+
   if (selectedChannelToken) {
     session.set('channelToken', selectedChannelToken);
   }
-  
+
   const fieldErrors = validateRegistrationForm(body);
   if (Object.keys(fieldErrors).length !== 0) {
     return fieldErrors;
   }
-  
+
   const variables = extractRegistrationFormValues(body);
-  
+
   // ✅ Pass selected channel token explicitly
   const result = await registerCustomerAccount(
     {
@@ -44,9 +44,9 @@ export async function action({ request }: ActionFunctionArgs) {
         'vendure-token': selectedChannelToken ?? '',
       },
     },
-    variables
+    { input: variables }
   );
-  
+
   if (result.__typename === 'Success') {
     return redirect('/sign-up/success', {
       headers: {
@@ -64,7 +64,7 @@ export async function action({ request }: ActionFunctionArgs) {
       },
     });
   }
-  
+
 }
 
 export default function SignUpPage() {
@@ -102,7 +102,7 @@ export default function SignUpPage() {
                 name="redirectTo"
                 value={searchParams.get('redirectTo') ?? undefined}
               />
-              <div>
+              {/* <div>
                 <label
                   htmlFor="email"
                   className="block text-sm font-medium text-gray-700"
@@ -123,7 +123,31 @@ export default function SignUpPage() {
                     </div>
                   )}
                 </div>
+              </div> */}
+
+              <div>
+                <label
+                  htmlFor="phoneNumber"
+                  className="block text-sm font-medium text-gray-700"
+                >
+                  {t('account.phoneNumber')}
+                </label>
+                <div className="mt-1">
+                  <input
+                    id="phoneNumber"
+                    name="phoneNumber"
+                    type="text"
+                    autoComplete="tel"
+                    className="appearance-none block w-full px-3 py-2 border border-gray-300 rounded-md shadow-sm placeholder-gray-400 focus:outline-none focus:ring-primary-500 focus:border-primary-500 sm:text-sm"
+                  />
+                  {formErrors?.phoneNumber && (
+                    <div className="text-xs text-red-700">
+                      {formErrors.phoneNumber}
+                    </div>
+                  )}
+                </div>
               </div>
+
 
               <div>
                 <label

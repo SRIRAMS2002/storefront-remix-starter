@@ -1,10 +1,12 @@
 import { RegisterCustomerAccountMutationVariables } from '~/generated/graphql';
+import dotenv from 'dotenv';
+dotenv.config();
 
 const EMAIL_REGEX = /^\w+([-+.']\w+)*@\w+([-.]\w+)*\.\w+([-.]\w+)*$/;
 
 export type RegisterValidationErrors = {
   form?: string;
-  email?: string;
+  phoneNumber?: string;
   password?: string;
   repeatPassword?: string;
 };
@@ -18,8 +20,9 @@ export const validateRegistrationForm = (
   const password = formData.get('password');
   const repeatPassword = formData.get('repeatPassword');
 
-  if (typeof email !== 'string' || !EMAIL_REGEX.test(email)) {
-    errors.email = 'A valid e-mail address is required.';
+  const phoneNumber = formData.get('phoneNumber')?.toString() || '';
+  if (!phoneNumber || phoneNumber.trim() === '') {
+    errors.phoneNumber = 'Phone number is required.';
   }
 
   if (typeof password !== 'string' || password.length < 4) {
@@ -36,16 +39,18 @@ export const validateRegistrationForm = (
 };
 
 
-export const extractRegistrationFormValues = (
-  formData: FormData,
-): RegisterCustomerAccountMutationVariables => {
+export const extractRegistrationFormValues = (formData: FormData) => {
+  const phoneNumber = formData.get('phoneNumber')?.toString() ?? '';
+  const emailAddress = `${phoneNumber}@kaikani.com`;
+  const password = formData.get('password')?.toString() ?? '';
+  const firstName = formData.get('firstName')?.toString() ?? '';
+  const lastName = formData.get('lastName')?.toString() ?? '';
+
   return {
-    input: {
-      emailAddress: formData.get('email') as string,
-      firstName: (formData.get('firstName') as string) || '',
-      lastName: (formData.get('lastName') as string) || '',
-      password: formData.get('password') as string,
-    },
+    emailAddress,
+    password,
+    firstName,
+    lastName,
+    phoneNumber,
   };
 };
-
