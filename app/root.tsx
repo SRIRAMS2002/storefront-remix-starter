@@ -94,8 +94,8 @@ export async function loader({ request, params, context }: DataFunctionArgs) {
 export default function App() {
   const [open, setOpen] = useState(false);
   const loaderData = useLoaderData<RootLoaderData>();
-  const { collections } = loaderData;
-  const { locale } = useLoaderData<typeof loader>();
+  const { collections, activeCustomer } = loaderData;
+  const { locale } = loaderData;
   const { i18n } = useTranslation();
   const {
     activeOrderFetcher,
@@ -105,11 +105,17 @@ export default function App() {
     refresh,
   } = useActiveOrder();
 
+  const [isSignedIn, setIsSignedIn] = useState(
+    !!activeCustomer.activeCustomer?.id
+  );
+
+  useEffect(() => {
+    setIsSignedIn(!!loaderData.activeCustomer.activeCustomer?.id);
+  }, [loaderData.activeCustomer.activeCustomer?.id]);
+
   useChangeLanguage(locale);
 
   useEffect(() => {
-    // When the loader has run, this implies we should refresh the contents
-    // of the activeOrder as the user may have signed in or out.
     refresh();
   }, [loaderData]);
 
@@ -126,8 +132,10 @@ export default function App() {
         <Header
           onCartIconClick={() => setOpen(!open)}
           cartQuantity={activeOrder?.totalQuantity ?? 0}
+          isSignedIn={isSignedIn}
+          collections={collections}
         />
-        <main className="">
+        <main>
           <Outlet
             context={{
               activeOrderFetcher,
@@ -153,6 +161,7 @@ export default function App() {
     </html>
   );
 }
+
 
 type DefaultSparseErrorPageProps = {
   tagline: string;

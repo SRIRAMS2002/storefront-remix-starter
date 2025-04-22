@@ -27,12 +27,21 @@ export async function getSessionStorage() {
   const factory = await getCookieSessionStorageFactory();
   sessionStorage = factory({
     cookie: {
-      name: 'vendure_remix_session',
-      httpOnly: true,
-      path: '/',
-      sameSite: 'lax',
-      secrets: ['awdbhbjahdbaw'],
+      // name: 'vendure_remix_session',
+      // httpOnly: true,
+      // path: '/',
+      // sameSite: 'lax',
+      // secrets: ['awdbhbjahdbaw'],
+
+        name: 'vendureSession', // ✅ must match what Vendure is setting or what you're using
+        httpOnly: true,
+        sameSite: 'lax',
+        path: '/',
+        secrets: ['your-secret'],
+        secure: process.env.NODE_ENV === 'production',
     },
   });
   return sessionStorage;
 }
+
+

@@ -2,6 +2,7 @@ import { DocumentNode, print } from 'graphql';
 import { API_URL } from './constants';
 import { getSdk } from './generated/graphql';
 import { getSessionStorage } from './sessions';
+// import { getSessionStorage } from './sessions';
 
 export interface QueryOptions {
   request?: Request;
@@ -38,7 +39,7 @@ async function sendQuery<Response, Variables = {}>(options: {
 
   const sessionStorage = await getSessionStorage();
   const session = await sessionStorage.getSession(
-    options.request?.headers.get('Cookie'),
+    options.request?.headers.get('Cookie')
   );
 
   // ✅ Only inject vendure-token from session if not already set
@@ -72,7 +73,6 @@ async function sendQuery<Response, Variables = {}>(options: {
   };
 }
 
-
 // ✅ Requester that handles session-based tokens and returns headers
 function requester<R, V>(
   doc: DocumentNode,
@@ -84,31 +84,35 @@ function requester<R, V>(
     variables: vars,
     ...options,
   }).then(async (response) => {
-    const token = response.headers.get('vendure-auth-token');
-    const headers: Record<string, string> = {};
+    const vendureAuthToken = response.headers.get('vendure-auth-token');
+    const headers = new Headers();
 
     const sessionStorage = await getSessionStorage();
     const session = await sessionStorage.getSession(
-      options?.request?.headers.get('Cookie'),
+      options?.request?.headers.get('Cookie')
     );
+    
 
-    if (token && session) {
+    if (vendureAuthToken && session) {
       // ✅ Store new auth token
-      session.set(AUTH_TOKEN_SESSION_KEY, token);
-      headers['Set-Cookie'] = await sessionStorage.commitSession(session);
+      session.set(AUTH_TOKEN_SESSION_KEY, vendureAuthToken);
+
+      // ✅ Save updated session cookie
+      const setCookie = await sessionStorage.commitSession(session);
+      headers.set('Set-Cookie', setCookie);
     }
 
-    headers['x-vendure-api-url'] = API_URL;
+    headers.set('x-vendure-api-url', API_URL);
 
     if (response.errors?.length) {
       console.error(
         response.errors[0].extensions?.exception?.stacktrace?.join('\n') ??
-          response.errors,
+          response.errors
       );
       throw new Error(JSON.stringify(response.errors[0]));
     }
 
-    return { ...response.data, _headers: new Headers(headers) };
+    return { ...response.data, _headers: headers };
   });
 }
 

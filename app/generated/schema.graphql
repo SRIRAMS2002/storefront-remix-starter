@@ -74,6 +74,7 @@ enum AssetType {
 
 input AuthenticationInput {
   native: NativeAuthInput
+  phoneOtp: PhoneOtpInput
 }
 
 type AuthenticationMethod implements Node {
@@ -2042,6 +2043,7 @@ type Mutation {
 
   """Resets a Customer's password based on the provided token"""
   resetPassword(password: String!, token: String!): ResetPasswordResult!
+  sendPhoneOtp(phoneNumber: String!): Boolean
 
   """
   Set the Customer for the Order. Required only if the Customer is not currently logged in
@@ -2890,6 +2892,13 @@ enum Permission {
 
   """Grants permission to update Zone"""
   UpdateZone
+}
+
+input PhoneOtpInput {
+  code: String!
+  firstName: String
+  lastName: String
+  phoneNumber: String!
 }
 
 """The price range where the result has more than one price"""
