@@ -41,6 +41,8 @@ export async function action({ request }: ActionFunctionArgs) {
   const selectedChannelToken = body.get('channel')?.toString();
   const firstName = body.get('firstName')?.toString();
   const lastName = body.get('lastName')?.toString();
+  const redirectTo = (body.get('redirectTo') || '/account') as string;
+
 
   const sessionStorage = await getSessionStorage();
   const session = await sessionStorage.getSession(request.headers.get('Cookie'));
@@ -75,7 +77,7 @@ export async function action({ request }: ActionFunctionArgs) {
     }
 
     try {
-      const { result } = await authenticate(
+      const { result ,headers} = await authenticate(
         {
           phoneOtp: {
             phoneNumber,
@@ -91,9 +93,16 @@ export async function action({ request }: ActionFunctionArgs) {
           },
         }
       );
+      const vendureToken = headers.get('vendure-auth-token'); // ✅ CORRECT
 
       if ('__typename' in result && result.__typename === 'CurrentUser') {
-        return redirect('/sign-up/success', {
+        
+        
+        if (vendureToken) {
+          session.set('authToken', vendureToken);
+        }
+      
+        return redirect(redirectTo, {
           headers: {
             'Set-Cookie': await sessionStorage.commitSession(session),
           },

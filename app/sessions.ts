@@ -5,7 +5,7 @@ import {
 import { SessionStorage } from '@remix-run/server-runtime/dist/sessions';
 import { ErrorResult } from '~/generated/graphql';
 import { createCookieSessionStorage } from '@remix-run/cloudflare';
-import { CreateCookieSessionStorageFunction } from '@remix-run/server-runtime';
+import { CreateCookieSessionStorageFunction, redirect } from '@remix-run/server-runtime';
 
 async function getCookieSessionStorageFactory(): Promise<CreateCookieSessionStorageFunction> {
   if (IS_CF_PAGES) {
@@ -45,3 +45,18 @@ export async function getSessionStorage() {
 }
 
 
+
+
+// export async function clearSession() {
+//   const session = await getSessionStorage();
+  
+//   // Clear all session data
+//   session.set('vendureSession', undefined);
+
+//   // Return a redirect to login with cleared session
+//   return redirect('/login', {
+//     headers: {
+//       'Set-Cookie': await session.commit(), // This should commit the updated session
+//     },
+//   });
+// }

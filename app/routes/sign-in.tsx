@@ -33,6 +33,9 @@ export async function action({ request }: ActionFunctionArgs) {
     return json({ message: 'Invalid phone number' }, { status: 400 });
   }
 
+  console.log('Incoming actionType:', actionType);
+console.log('Phone Number:', phoneNumber);
+
   // Send OTP flow
   if (actionType === 'send-otp') {
     const sent = await sendPhoneOtp(phoneNumber);
@@ -44,11 +47,14 @@ export async function action({ request }: ActionFunctionArgs) {
     const email = `${phoneNumber}@kaikani.com`;
     const channels = await getChannelsByCustomerEmail(email);
 
+    console.log('Channels found:', channels);
+
     if (!channels || channels.length === 0) {
       return json({ message: 'No channel associated with this phone number.' }, { status: 403 });
     }
 
     const selectedChannelToken = channels[0].token;
+    console.log('Using channel token:', selectedChannelToken);
 
     const result = await authenticate(
       {

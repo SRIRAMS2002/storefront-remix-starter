@@ -13,6 +13,8 @@ import {
   ErrorResult
 } from '~/generated/graphql';
 import { QueryOptions, sdk, WithHeaders } from '~/graphqlWrapper';
+import { redirect } from '@remix-run/server-runtime';
+import { getSessionStorage } from '~/sessions';
 
 // export const login = async (
 //   email: string,
@@ -47,13 +49,31 @@ export async function login(
 }
 
 
+// export const logout = async (
+//   options: QueryOptions,
+// ): Promise<WithHeaders<LogoutMutation['logout']>> => {
+//   return sdk.logout({}, options).then((res) => ({
+//     ...res.logout,
+//     _headers: res._headers,
+//   }));
+// };
+
+
 export const logout = async (
-  options: QueryOptions,
-): Promise<WithHeaders<LogoutMutation['logout']>> => {
-  return sdk.logout({}, options).then((res) => ({
-    ...res.logout,
-    _headers: res._headers,
-  }));
+  options: QueryOptions
+): Promise<WithHeaders<LogoutMutation['logout']> | Response> => {
+  const logoutResult = await sdk.logout({}, options);
+  const sessionStorage = await getSessionStorage();
+  const session = await sessionStorage.getSession(
+    options?.request?.headers.get('Cookie')
+  );
+  const setCookie = await sessionStorage.destroySession(session);
+
+  const headers = new Headers(logoutResult._headers);
+  headers.set('Set-Cookie', setCookie);
+
+  // Redirect to login page
+  return redirect('/login', { headers });
 };
 
 export const registerCustomerAccount = async (
